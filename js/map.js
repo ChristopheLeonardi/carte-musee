@@ -1,3 +1,4 @@
+/* Lien github : https://github.com/ChristopheLeonardi/carte-musee.git */
 $(document).ready(function() {
 
     var promises = []

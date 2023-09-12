@@ -17,14 +17,15 @@ const filtersActions = () => {
 
 /* Générer un set reccord et un set norm, switch set on checkbox */
 /* Générer un objet avec méthodes pour épurer code variables globales */
-
     window["saved_initial_data"] = window.c_data
     window["current_select_data"] = window.c_data
     window["type_data"] = window.c_data
     window["record_data"] = window.c_data
 
+    // Create first display of localisation
+    populateLocalisation(window.c_data)
+
     /* Filter by recorded instruments */
-    /*  Not working */
     $("#with-records").change(e => {
 
         window.continents_popups.forEach(popup => { map.removeLayer(popup) })
@@ -33,19 +34,14 @@ const filtersActions = () => {
             
             let filtered_data = window.type_data.raw_data.filter(notice => { return notice["URL Enregistrement"] != ""})
 
-            //let notices_to_check = filtered_data.concat(window.type_data.raw_data)
-            //let notices_to_keep = notices_to_check.filter((a, i, aa) => aa.indexOf(a) === i && aa.lastIndexOf(a) !== i)
-
             let processed_filtered_data = window.process_data.createDataObject(filtered_data)
 
             window.c_data = processed_filtered_data // update markers
             window.record_data = processed_filtered_data // record data
 
-            //console.log(window.record_data)
-
             populatefilters(processed_filtered_data)
-            populateLocalisation(processed_filtered_data)
             createContinentMarkers(processed_filtered_data)
+            populateLocalisation(processed_filtered_data)
         }
         else{
 
@@ -55,6 +51,7 @@ const filtersActions = () => {
             createContinentMarkers(window.c_data)
             populateLocalisation(window.c_data)
         }
+        
     })
 
     /* Filter by Type */
@@ -67,6 +64,7 @@ const filtersActions = () => {
 
         if (selected_type == "all"){
             var processed_filtered_data = window.record_data
+            populateLocalisation(processed_filtered_data)
         }
         else{
             
@@ -88,14 +86,19 @@ const filtersActions = () => {
         
         window.c_data = processed_filtered_data
         createContinentMarkers(processed_filtered_data)
+        populateLocalisation(processed_filtered_data)
+        map.setView([20, 155], 2.25);
 
     })
-    /* Localisation */
+
+    /* Filter Localisation */
     window.selectizeItem.on('change', function() {
 
         /* Fonctionne à la première impression de l'écran, mais plus après utilisation de filtres (destroy and create problem ?) */
 
         var value = selectizeItem[0].selectize.getValue();
+
+        // if value is a country
         if (value.length == 2){
             window["countries_layers"].map(obj => {
                 Object.keys(obj._layers).filter(key => {
@@ -106,6 +109,8 @@ const filtersActions = () => {
         }
 
         /* !!! Impossibilité de déclencher le clic sur la popup du continent. !!! */
+
+        // else value is a continent
         else{
             let continent_infos = Object.keys(window.continent_infos).map(key => { 
                 let norm_continent = window.utils.normalize_string(window.continent_infos[key].norm_name)
@@ -123,6 +128,8 @@ const filtersActions = () => {
             })
         }
     });
+    /* Search Plain text */
+    searchBox()
 
     /* Reset Filters */
     $("#reset-button").on("click", e => {
@@ -162,7 +169,7 @@ const populateLocalisation = data => {
 
 const createOptionsLocalisation = data => {
     var array_continent = createSelectizeDOM(data)
-    window["selectizeItem"] = $("#loc-select").selectize({
+    window.selectizeItem = $("#loc-select").selectize({
         maxItems: 1,
         valueField: 'id',
         labelField: 'name_fr',
@@ -175,13 +182,14 @@ const createOptionsLocalisation = data => {
         },
     });
 }
-
 const createSelectizeDOM = data => {
     var array_continent = []
     Object.keys(data.continents).map(continent => {
         var array_options = []
         // Add leading 0 as marker for bold optgroup
-        let key_value = (continent == "" || continent == "unknown") ? "0Sans localisation" : `0${continent}`
+        if (continent == "unknown") { return }
+        
+        let key_value = `0${continent}`
         let option = {
             "id" : window.utils.normalize_string(key_value),
             "name_fr" : key_value,
@@ -190,15 +198,15 @@ const createSelectizeDOM = data => {
         array_options.push(option)
 
         Object.keys(data.continents[continent].notices).map(country_code => {
-            if (country_code != ""){
-                var detail_country = window["topojson_data"].filter(item => { return item.ISO_A2_EH == country_code })[0]
-            }
 
+            if (country_code == ""){ return }
+
+            var detail_country = window["topojson_data"].filter(item => { return item.ISO_A2_EH == country_code })[0]
             let option = {
                 "id" : country_code == "" ? `${continent}-99` : country_code,
-                "name_fr" : country_code == "" ? "_Sans localisation" : detail_country.NAME_FR,
-                "name_native" : country_code == "" ? continent.replace("unknown", "Sans localisation") : detail_country.name_native,
-                "count" : country_code == "" ? continent.count : data.continents[continent].notices[country_code].count,
+                "name_fr" : detail_country.NAME_FR,
+                "name_native" : detail_country.name_native,
+                "count" : data.continents[continent].notices[country_code].count,
             }
             array_options.push(option)
 
@@ -311,7 +319,7 @@ const populateObjectTypes = data => {
     })
 }
 
-const searchBox = (data, map, cats, regions) => {
+const searchBox = () => {
 
     /* SEEKER FUNCTION */
     if (!RegExp.escape) {
@@ -321,80 +329,35 @@ const searchBox = (data, map, cats, regions) => {
     }
 
     $('.search-bar').submit(function(e) { e.preventDefault() })
-    accessibilityButton(data, cats)
+    //accessibilityButton(data, cats)
 
     $('#search').click(function(e) {
 
-        var catSelected = $("#typeSelection").data("select")
-        if (catSelected) {
-            data = window[`${catSelected}Data`]
-        }
-        var filterQuery = filterSearch(data)
-        $("#result-msg span")[0].textContent = filterQuery.filtered.length
+        var filterQuery = filterSearch()
+        var processed_filtered_data = window.process_data.createDataObject(filterQuery.filtered)
 
-        if (filterQuery.filtered.length == 0) {
-            return
-        }
+        // Set filtered data for other filters
+        window.c_data = processed_filtered_data
+        window.current_select_data = processed_filtered_data
+        window.type_data = processed_filtered_data
+        window.record_data = processed_filtered_data
 
-        // Mise à jour des résultats de la carte en supprimant les cluster et les recréant avec le dataset filtré
-        var newMarkers = []
-        carteAbonnee.eachLayer(layer => { if (layer instanceof L.MarkerClusterGroup) { carteAbonnee.removeLayer(layer) } })
-        cats.map(cat => {
-            var filterCatItem = []
-            filterQuery.filtered.map(item => {
-                if (item.type_equipement_ou_lieu.toLowerCase() == cat.type) {
-                    filterCatItem.push(item)
-                }
-            })
-            newMarkers.push(createCluster(cat, filterCatItem, regions))
-        })
+        // Unset recorded instrument
+        document.getElementById("with-records").checked = false;
 
-        // Création de la liste des marqueurs filtrés 
+        populatefilters(processed_filtered_data)
+        createContinentMarkers(processed_filtered_data)
+        map.setView([20, 155], 2.25);
 
-        newMarkers = flatArray(newMarkers.flat().map(cluster => { return cluster.markers }))
-
-        $("#access-button").remove()
-        accessibilityButton(filterQuery.filtered)
-        createButtonReseaux(filterQuery.filtered)
-
-        // Construction du DOM des résultats
-        document.getElementById('searchResults').replaceChildren()
-        if (filterQuery.query != `(?=.*)`) {
-            carteAbonnee.setView([46.71109, 1.7191036], 6)
-            $.each(filterQuery.filtered, function(key, val) {
-                var popup = createPopup(val, "isSearch", newMarkers, map)
-                document.getElementById('searchResults').appendChild(popup)
-            })
-
-            if ($("#resultsLink").length == 0) {
-                // If button does not exists, create it
-                let resultsLink = document.createElement("a")
-                resultsLink.setAttribute("href", "#filter-results")
-                resultsLink.setAttribute("id", "resultsLink")
-                resultsLink.setAttribute("class", "btn btn-default")
-                resultsLink.textContent = "Voir la liste"
-
-                $(".search-bar")[0].insertBefore(resultsLink, document.getElementById("result-msg"))
-
-                $("#noResult-msg").remove()
-
-            }
-        }
 
     })
 
 }
-const filterSearch = (data) => {
-
-    var catFilter = $("#typeSelection").attr("data-select")
-    if (catFilter) {
-        data = window[`${catFilter}Data`]
-    }
-
+const filterSearch = () => {
+    const data = window.saved_initial_data.raw_data
     var searchTerms = document.getElementById("seeker").value.replace(/\s$/gmi, "")
 
     // Traitement de la recherche avec prise en charge de la recherche exacte ("lorem")
-
     let queryReg = []
     var regexQuote = new RegExp(/\"(.*?)\"/, 'gm')
 
@@ -415,7 +378,9 @@ const filterSearch = (data) => {
             return new RegExp(query, "mgi").test(obj[key])
         }))
     }
-    queryReg.map(query => { filtered.push(filterIt(data, query)) })
+    queryReg.map(query => { 
+        filtered.push(filterIt(data, query)) 
+    })
 
     // Prise en charge de la recherche avec mots multiples dans tous les champs de data
     if (queryReg.length > 1) {
@@ -423,21 +388,6 @@ const filterSearch = (data) => {
         filtered = findDuplicates(filtered.flat())
     }
     return { "filtered": filtered.flat(), "query": queryReg }
-}
-
-const accessibilityButton = data => {
-    if ($("#access-button").length == 0) {
-        let accessButton = document.createElement('button')
-        accessButton.textContent = `Version accessible`
-        accessButton.setAttribute('class', 'btn btn-default')
-        accessButton.setAttribute('id', 'access-button')
-        $(accessButton).click(e => {
-            accessTable(data)
-        })
-
-        document.getElementById("mapFilter").appendChild(accessButton)
-    }
-
 }
 
 const accessTable = data => {

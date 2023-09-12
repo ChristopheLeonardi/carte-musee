@@ -59,7 +59,7 @@
             <h3>Filtres</h3>
             <p id="nb-items"></p>
         </div>
-        <form class="search-bar" action="">
+        <form class="search-bar" action="" id="search-bar">
         <fieldset id="record-search">
             <label for="with-records">Instruments enregistrés</label>
             <input type="checkbox" id="with-records" name="with-records" />
@@ -76,14 +76,14 @@
         </div>
         </form>
 
+        <h3>Types d'Objets</h3>
+        <fieldset class="types" id="types-filter"></fieldset>
+
         <h3>Localisation</h3>
         <div class="custom-select">
             <select name="localisation" id="loc-select" placeholder="Choisissez une localisation">
             </select>
         </div>
-        <h3>Types d'Objets</h3>
-        <fieldset class="types" id="types-filter"></fieldset>
-
     </aside>
 
     <div id="mapMusee"></div>

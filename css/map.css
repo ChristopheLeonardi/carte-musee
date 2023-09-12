@@ -631,6 +631,9 @@ fieldset{
     justify-content: space-between;
     flex-wrap: wrap;
 }
+#cartel-container .cartel-textes div.notice-hierarchy{
+    justify-content: flex-start;
+}
 #cartel-container .cartel-textes .author::before{
     content: "";
     display: block;

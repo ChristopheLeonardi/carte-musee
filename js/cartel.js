@@ -86,6 +86,11 @@ const createCartel = (e, notices) => {
             button.setAttribute("type", "button")
             button.setAttribute("data-search", window.utils.normalize_string(term).replace("'", "_"))
             button.textContent = term
+            $(button).click(function(){
+                console.log($("#seeker"))
+                document.getElementById("seeker").value = `"${term}"`
+                $("#search").click()
+            })
             hierarchy.appendChild(button)
             
         })

@@ -555,7 +555,7 @@ const getNoticeData = layer => {
   })[0]
 
   // Get notices data for country by cities
-  var continent = window["c_data"].continents[continent_fr]  
+  var continent = window["c_data"].continents[continent_fr] 
   return continent.notices[layer.layerID].cities
 }
 
@@ -564,7 +564,10 @@ const randomizeCoord = (country_center, superficie) => {
   var degFactor = 0.555
   var section = Math.sqrt(superficie / Math.PI) * fraction
   var amplitude = section / degFactor * fraction
-  return [parseFloat(country_center[0]) + amplitude * (Math.random() * 2 - 1) / 4,  enableAnteMeridian(parseFloat(country_center[1])) + amplitude * (Math.random() * 2 - 1) / 4]
+  return [
+    parseFloat(country_center[0]) + amplitude * (Math.random() * 2 - 1) / 4,
+    enableAnteMeridian(parseFloat(country_center[1])) + amplitude * (Math.random() * 2 - 1) / 4
+  ]
 }
 const getNeighbor = country => {
 
